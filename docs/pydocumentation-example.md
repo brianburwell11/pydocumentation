@@ -4,7 +4,9 @@
 This is an example subpackage to demonstrate how the documentation is
 presented.
 
----
+
+## Subpackages
+* [pydocumentation.example.navbar](pydocumentation-example-navbar.md) - This is a nested subpackage that demonstrates the utility of the navbar.
 
 ## Functions
 * [example_function][example_function]

@@ -29,6 +29,77 @@ def get_class_that_defined_method(meth):
     return getattr(meth, '__objclass__', None)  # handle special descriptor objects
 
 
+def get_docs_directory(package_dir, parent_package=None):
+    """Gets the directory for documentation in the main package.
+
+    Parameters
+    ----------
+    package_dir : str or path-like
+        The path to the directory of the package or subpackage.
+    parent_package : str, optional
+        The name of the root package. Only relevant if `package_dir` is
+        to a subpackage. Default is None.
+
+    Returns
+    -------
+    str
+        The path to the `/docs` subdirectory in the main package root directory.
+    """
+
+    if parent_package is None:
+        return join(package_dir, 'docs')
+    else:
+        depth = len(parent_package.split('.'))
+        return join(package_dir, *['..']*depth, 'docs')
+
+def get_public_methods(class_obj):
+    """Gets all of the "public" methods of a class.
+
+    By convention, public methods are methods that do not start with an
+    underscore "_".
+
+    Parameters
+    ----------
+    class_obj : obj
+        A Python class.
+
+    Returns
+    -------
+    list
+        All of the objects that represent public methods of `class_obj`.
+    """
+
+    return [getattr_static(class_obj,m) for m in dir(class_obj) if not m.startswith('_')]
+
+def get_public_objects(package):
+    """Gets all of the "public" objects of a package.
+
+    Public objects are defined as functions, classes, and variables that
+    do not start with an underscore "_".
+
+    Parameters
+    ----------
+    package : str
+        The name of the package as a string, with subpackages separated
+        by periods ".". Subpackages should not have the main package as the
+        first part.
+    
+    Returns
+    -------
+    list
+        All of the public objects in the package, as determined by its
+        `__init__`.
+    """
+
+    pkg = import_module(package)
+
+    try:
+        public_objects = [getattr(pkg,obj) for obj in pkg.__all__ if not obj.startswith('_')]
+    except AttributeError:
+        public_objects = [getattr(pkg,obj) for obj in dir(pkg) if not obj.startswith('_')]
+            
+    return public_objects    
+
 def get_obj_documentation(obj):
     """Gets a markdown string for the documentation of an object.
 
@@ -152,26 +223,79 @@ def get_obj_documentation(obj):
 
     return md_docstring, links
 
+def get_subpackages(package_dir, include_nested=False):
+    """Gets all of the subpackages contained within a package.
 
-def get_public_methods(class_obj):
-    """Gets all of the "public" methods of a class.
-
-    By convention, public methods are methods that do not start with an
-    underscore "_".
+    A subpackage is defined as a subdirectory that contains an
+    `__init__.py` file.
 
     Parameters
     ----------
-    class_obj : obj
-        A Python class.
+    package_dir : str or path-like
+        The path to a python package's main folder.
+    include_nested : bool, optional
+        Whether or not to include nested subpackages recursively.
+        Default is False.
 
     Returns
     -------
     list
-        All of the objects that represent public methods of `class_obj`.
+        The subpackage (and nested subpackage) names as strings.
     """
 
-    return [getattr_static(class_obj,m) for m in dir(class_obj) if not m.startswith('_')]
-    
+    if include_nested:
+        wildcard = '**'
+    else:
+        wildcard = '*'
+
+    subpackages = []
+    for init_file in iglob(join(package_dir, wildcard, '__init__.py'), recursive=include_nested):
+        subpkg = split(init_file)[0].replace(package_dir, '').replace(sep, '.')
+        if not subpkg.startswith('_'):
+            subpackages.append(subpkg[1:])
+
+    return subpackages
+
+def get_subpackage_toc(package_dir, package_name='', exclude=[]):
+    """Creates a table of contents for subpackages in a directory.
+
+    Parameters
+    ----------
+    package_dir : str or path-like
+        The path to a package.
+    package_name : str, optional
+        The name of the package as it is imported. If not given, will be
+        the basename of `package_dir`.
+    exclude : list, optional
+        A list of subpackage names to not add to the table of contents.
+        Default is None.
+
+    Returns
+    -------
+    str
+        The table of contents ending in a newline. If `package_dir` has
+        no subpackages, the table of contents will be an empty string.
+    """
+
+    if package_name == '':
+        pkg = basename(abspath(package_dir))
+    else:
+        pkg = package_name 
+
+    subpackages = get_subpackages(package_dir)
+    [subpackages.remove(subpkg) for subpkg in exclude if subpkg.startswith('_') or subpkg in subpackages]
+
+    subpackage_toc = ''
+    if len(subpackages) >= 1:
+        subpackage_toc += '\n\n## Subpackages\n'
+        for subpkg in subpackages:
+            subpkg_name = f'{pkg}.{subpkg}'
+
+            subpkg_docstring = import_module(subpkg_name).__doc__
+            subpackage_toc += f"* [{subpkg_name}]({subpkg_name.replace('.','-')}.md) - {subpkg_docstring}\n"
+        subpackage_toc += '\n'
+
+    return subpackage_toc
 
 def parse_docstring(obj):
     """Parses the sections of a numpy-style docstring.
@@ -275,7 +399,7 @@ def parse_docstring(obj):
         return {'Summary': 'Not Documented.'}
 
 
-def write_documentation(objs, filename, include_toc=True):
+def write_documentation_for_objs(objs, filename, include_toc=True):
     """Writes documentation to a file.
 
     Parameters
@@ -338,174 +462,136 @@ def write_documentation(objs, filename, include_toc=True):
     with open(filename, 'w') as f:
         f.write(documentation)
 
+if False:
+    pass
+    # def write_subpackage_documentation(package_dir='', exclude=[], parent_package=None, recursive=True):
+    #     """Writes documentation to a file for every subpackage in a package.
 
-def get_subpackages(package_dir):
-    """Gets all of the subpackages contained within a package.
+    #     A subpackage is defined as a subdirectory that has an `__init__.py` file.
 
-    A subpackage is defined as a subdirectory that contains an
-    `__init__.py` file.
+    #     Parameters
+    #     ----------
+    #     package_dir : str or path-like, optional
+    #         The path to the main package directory. If not given, will
+    #         default to the directory that this function is in. Default is None.
+    #     exclude : list, optional
+    #         A list of strings of subpackage names (subdirectories) to not write
+    #         documentation for. Default is None.
+    #     parent_package : str, optional
+    #         If `package_dir` is itself a subdirectory, then `parent_package`
+    #         is the name of its parent. Default is None.
+    #     recursive : bool, optional
+    #         Whether or not to also write documentation for nested
+    #         subpackages. Default is True.
+    #     """
+
+    #     if package_dir == '':
+    #         package_dir = split(__file__)[0]
+
+    #     make_docs_directory(package_dir)
+
+    #     if parent_package is not None:
+    #         pkg = parent_package
+    #     else:
+    #         pkg = basename(abspath(package_dir))
+
+    #     for subpkg in get_subpackages(package_dir):
+    #         if subpkg not in exclude:
+    #             subpkg_name = f'{pkg}.{subpkg}'
+    #             subpkg_dir = join(package_dir, subpkg)
+    #             print(f'Writing documentation for {subpkg_name} ...')
+                
+    #             doc_fname = join(package_dir, 'docs', f"{subpkg_name.replace('.','-')}.md")
+    #             write_documentation_for_objs(get_public_objects(subpkg_name), doc_fname)
+
+    #             with open(doc_fname, 'r') as fo:
+    #                 documentation = fo.read()
+
+    #             title =  f'# Documentation for the {subpkg_name} subpackage\n'
+    #             subpkg_docstring = import_module(subpkg_name).__doc__
+
+    #             tree = subpkg_name.split('.')
+    #             doc_links = {s:f"{'-'.join(tree[:i])}.md" for i,s in enumerate(tree, 1)}
+    #             navbar = '##### ' + ' . '.join([f"[{s}]({doc_links.get(s)})" for s in tree[:-1]]) + f' . **{tree[-1]}**\n\n'
+    #             subpackage_toc = get_subpackage_toc(subpkg_dir, subpkg_name, exclude)
+
+    #             with open(doc_fname, 'w') as f:
+    #                 f.write(title)
+    #                 f.write(navbar)
+    #                 f.write(subpkg_docstring)
+    #                 # f.write('\n\n---\n\n')
+    #                 f.write(subpackage_toc)
+    #                 f.write(documentation)
+
+    #             if recursive:
+    #                 nested_subpackages = get_subpackages(subpkg_dir)
+    #                 if len(nested_subpackages) >= 1:
+    #                     [write_subpackage_documentation(subpkg_dir,exclude,subpkg_name) for nested_subpkg in nested_subpackages]
+
+def write_package_documentation(package_dir='', parent_package=None, write_subpkgs=True, exclude=[]):
+    """Writes the documentation for a package and any subpackages.
 
     Parameters
     ----------
-    package_dir : str or path-like
-        The path to a python package's main folder.
-
-    Returns
-    -------
-    list
-        The subkpackage (and sub-subpackage) names as strings.
+    package_dir : str or path-like, optional
+        The path to the main package directory. If not given, will
+        default to the directory that this function is in. Default is
+        None.
+    parent_package : str, optional
+        If the package in `package_dir` is a subdirectory, the name of
+        the main package it is part of. Default is None.
+    write_subpkgs : bool, optional
+        Whether or not to write documentation for every subpackage.
+        Default is True.
+    exclude : list, optional
+        A list of strings of subpackage names to not write documentation
+        for. Only relevant if `write_subpkgs` is True. Default is None.
     """
 
-    subpackages = []
-    for init_file in iglob(join(package_dir, '**', '__init__.py'), recursive=True):
-        subpkg = split(init_file)[0].replace(package_dir, '').replace(sep, '.')
-        subpackages.append(subpkg[1:])
+    if package_dir == '':
+        package_dir = split(__file__)[0]
 
-    subpackages.remove('')
-
-    return subpackages
-
-
-def get_public_objects(package):
-    """Gets all of the "public" objects of a package.
-
-    Public objects are defined as functions, classes, and variables that
-    do not start with a double underscore "__".
-
-    Parameters
-    ----------
-    package : str
-        The name of the package as a string, with subpackages separated
-        by periods ".". Subpackages should not have the main package as the
-        first part.
-    
-    Returns
-    -------
-    list
-        All of the public objects in the package, as determined by its
-        `__init__`.
-    """
-
-    pkg = import_module(package)#__import__(f'{package}.__init__')
-
-    public_objects = []
-    for obj in dir(pkg):
-        if not obj.startswith('__'):
-            public_objects.append(getattr(pkg, obj))
-            
-    return public_objects
-
-
-def make_docs_directory(package_dir):
-    """Makes a directory called "docs" in the package directory.
-
-    Parameters
-    ----------
-    package_dir : str or path-like
-        The path to the main directory of the package.
-    """
-
-    docs_dir = join(package_dir, 'docs')
-
+    docs_dir = get_docs_directory(package_dir, parent_package)
     if not exists(docs_dir):
         makedirs(docs_dir)
-
-
-def write_subpackage_documentation(package_dir='', exclude=[]):
-    """Writes documentation to a file for every subpackage in a package.
-
-    A subpackage is defined as a subdirectory that has an `__init__.py` file.
-
-    Parameters
-    ----------
-    package_dir : str or path-like, optional
-        The path to the main package directory. If not given, will
-        default to the directory that this function is in. Default is None.
-    exclude : list, optional
-        A list of strings of subpackage names (subdirectories) to not write
-        documentation for. Default is None.
-    """
-
-    if package_dir == '':
-        package_dir = split(__file__)[0]
-
-    make_docs_directory(package_dir)
-
-    pkg = basename(abspath(package_dir))
-
-    for subpkg in get_subpackages(package_dir):
-        if subpkg not in exclude:
-            print(f'Writing documentation for {pkg}.{subpkg} ...')
-            
-            doc_fname = join(package_dir, 'docs', f"{pkg}-{subpkg.replace('.','-')}.md")
-            write_documentation(get_public_objects(f'{pkg}.{subpkg}'), doc_fname)
-
-            with open(doc_fname, 'r') as fo:
-                documentation = fo.read()
-
-            title =  f'# Documentation for the {pkg}.{subpkg} subpackage\n'
-            subpkg_docstring = import_module(f'{pkg}.{subpkg}').__doc__
-
-            tree = f'{pkg}.{subpkg}'.split('.')
-            doc_links = {s:f"{'-'.join(tree[:i])}.md" for i,s in enumerate(tree, 1)}
-            navbar = '##### ' + ' . '.join([f"[{s}]({doc_links.get(s)})" for s in tree[:-1]]) + f' . **{tree[-1]}**\n\n'
-
-            with open(doc_fname, 'w') as f:
-                f.write(title)
-                f.write(navbar)
-                f.write(subpkg_docstring)
-                f.write('\n\n---\n\n')
-                f.write(documentation)
-
-
-def write_package_documentation(package_dir='', exclude=[]):
-    """Writes the documentation for the package and any subpackages.
-
-    Parameters
-    ----------
-    package_dir : str or path-like, optional
-        The path to the main package directory. If not given, will
-        default to the directory that this function is in. Default is None.
-    exclude : list, optional
-        A list of strings of subpackage names (subdirectories) to not write
-        documentation for. Default is None.
-    """
-
-    if package_dir == '':
-        package_dir = split(__file__)[0]
-
-    make_docs_directory(package_dir)
     
     pkg = basename(abspath(package_dir))
+    title = f'# {pkg} Documentation\n'
+    navbar = ''
+    if parent_package is not None:
+        pkg = f'{parent_package}.{pkg}'
+        title = f'# Documentation for the {pkg} subpackage\n'
 
-    doc_fname = join(package_dir, 'docs', f'{pkg}.md')
+        tree = pkg.split('.')
+        doc_links = {s:f"{'-'.join(tree[:i])}.md" for i,s in enumerate(tree, 1)}
+        navbar = '##### ' + ' . '.join([f"[{s}]({doc_links.get(s)})" for s in tree[:-1]]) + f' . **{tree[-1]}**\n\n'
+
+    doc_fname = join(docs_dir, f"{pkg.replace('.','-')}.md")
 
     print(f'Writing documentation for {pkg} ...')
-    write_documentation(get_public_objects(pkg), doc_fname)
+    write_documentation_for_objs(get_public_objects(pkg), doc_fname)
 
     with open(doc_fname, 'r') as fo:
         documentation = fo.read()
 
-    title =  f'# {pkg} Documentation\n'
-    pkg_docstring = __import__('__init__').__doc__
+    pkg_docstring = import_module(pkg).__doc__
+    if pkg_docstring is None:
+        pkg_docstring = ''
 
-    subpackages = get_subpackages(package_dir)
-    [subpackages.remove(subpkg) for subpkg in exclude if subpkg in subpackages]
-
-    subpackage_toc = ''
-    if len(subpackages) >= 1:
-        write_subpackage_documentation(package_dir, exclude)
-
-        subpackage_toc += '\n\n## Subpackages\n'
-        for subpkg in subpackages:
-            subpkg_docstring = import_module(f'{pkg}.{subpkg}').__doc__
-            subpackage_toc += f"* [{pkg}.{subpkg}]({pkg}-{subpkg.replace('.','-')}.md) - {subpkg_docstring}\n"
-        subpackage_toc += '\n'
+    if write_subpkgs:
+        subpackage_toc = get_subpackage_toc(package_dir, pkg, exclude)
+    else:
+        subpackage_toc = ''
 
     with open(doc_fname, 'w') as f:
         f.write(title)
-        f.write(pkg_docstring)
+        f.write(navbar)
+        f.write(pkg_docstring + '\n')
         f.write(subpackage_toc)
         f.write(documentation)
 
-    print('\nDocumentation complete!')
+    if write_subpkgs:
+        for subpkg in get_subpackages(package_dir):
+            if subpkg not in exclude:
+                subpackage_dir = join(package_dir, subpkg)
+                write_package_documentation(subpackage_dir, pkg, write_subpkgs, exclude)

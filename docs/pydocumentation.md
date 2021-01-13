@@ -1,50 +1,41 @@
 # pydocumentation Documentation
 A tool that automatically generates Markdown Documentation from Python docstrings.
 
+
 ## Subpackages
 * [pydocumentation.example](pydocumentation-example.md) - This is an example subpackage to demonstrate how the documentation is
 presented.
-* [pydocumentation.example.navbar](pydocumentation-example-navbar.md) - This is a nested subpackage that demonstrates the utility of the navbar.
 
 ## Functions
-* [convert_to_markdown_link][convert_to_markdown_link]
-* [generate_markdown_table][generate_markdown_table]
+* [write_package_documentation][write_package_documentation]
+* [write_documentation_for_objs][write_documentation_for_objs]
 * [get_obj_documentation][get_obj_documentation]
 * [get_public_methods][get_public_methods]
 * [get_public_objects][get_public_objects]
-* [get_subpackages][get_subpackages]
-* [write_documentation][write_documentation]
-* [write_package_documentation][write_package_documentation]
-* [write_subpackage_documentation][write_subpackage_documentation]
+* [generate_markdown_table][generate_markdown_table]
+* [convert_to_markdown_link][convert_to_markdown_link]
 
 ---
 
-### convert_to_markdown_link(*string*)
-Converts a string to an acceptable markdown link. 
+### write_package_documentation(*package_dir=''*, *parent_package=None*, *write_subpkgs=True*, *exclude=[]*)
+Writes the documentation for a package and any subpackages. 
 
 | Parameter | Type |  |
 | --- | --- | --- |
-| string | str | The string to convert. |
+| *package_dir* | str or path-like, optional | The path to the main package directory. If not given, will default to the directory that this function is in. Default is None. |
+| *parent_package* | str, optional | If the package in `package_dir` is a subdirectory, the name of the main package it is part of. Default is None. |
+| *write_subpkgs* | bool, optional | Whether or not to write documentation for every subpackage. Default is True. |
+| *exclude* | list, optional | A list of strings of subpackage names to not write documentation for. Only relevant if `write_subpkgs` is True. Default is None. |
 
 
-| Returns |  |
-| --- | --- |
-| str | The string formatted to be a markdown link. |
-
-
-### generate_markdown_table(*headers*, **args*, *italicize_optional=True*)
-Generates a table in markdown. 
+### write_documentation_for_objs(*objs*, *filename*, *include_toc=True*)
+Writes documentation to a file. 
 
 | Parameter | Type |  |
 | --- | --- | --- |
-| headers | iterable | An iterable of strings to use as the headers for the table. This sets the number of columns. |
-| *args | iterable | Iterables the same length as `headers` that represent rows of table data. |
-| *italicize_optional* | bool, optional | Whether or not to italicize optional parameters. Default is True. |
-
-
-| Returns |  |
-| --- | --- |
-| str | The markdown table as a string |
+| objs | iterable of objects | A list of objects to write documentation for |
+| filename | str or path-like | The filename to write to, ending in '.md'. |
+| *include_toc* | bool, optional | Whether or not to include a table of contents at the beginning of the document. Default is True. |
 
 
 ### get_obj_documentation(*obj*)
@@ -79,7 +70,7 @@ By convention, public methods are methods that do not start with an underscore "
 ### get_public_objects(*package*)
 Gets all of the "public" objects of a package. 
 
-Public objects are defined as functions, classes, and variables that do not start with a double underscore "__". 
+Public objects are defined as functions, classes, and variables that do not start with an underscore "_". 
 
 | Parameter | Type |  |
 | --- | --- | --- |
@@ -91,58 +82,39 @@ Public objects are defined as functions, classes, and variables that do not star
 | list | All of the public objects in the package, as determined by its `__init__`. |
 
 
-### get_subpackages(*package_dir*)
-Gets all of the subpackages contained within a package. 
-
-A subpackage is defined as a subdirectory that contains an `__init__.py` file. 
+### generate_markdown_table(*headers*, **args*, *italicize_optional=True*)
+Generates a table in markdown. 
 
 | Parameter | Type |  |
 | --- | --- | --- |
-| package_dir | str or path-like | The path to a python package's main folder. |
+| headers | iterable | An iterable of strings to use as the headers for the table. This sets the number of columns. |
+| *args | iterable | Iterables the same length as `headers` that represent rows of table data. |
+| *italicize_optional* | bool, optional | Whether or not to italicize optional parameters. Default is True. |
 
 
 | Returns |  |
 | --- | --- |
-| list | The subkpackage (and sub-subpackage) names as strings. |
+| str | The markdown table as a string |
 
 
-### write_documentation(*objs*, *filename*, *include_toc=True*)
-Writes documentation to a file. 
-
-| Parameter | Type |  |
-| --- | --- | --- |
-| objs | iterable of objects | A list of objects to write documentation for |
-| filename | str or path-like | The filename to write to, ending in '.md'. |
-| *include_toc* | bool, optional | Whether or not to include a table of contents at the beginning of the document. Default is True. |
-
-
-### write_package_documentation(*package_dir=''*, *exclude=[]*)
-Writes the documentation for the package and any subpackages. 
+### convert_to_markdown_link(*string*)
+Converts a string to an acceptable markdown link. 
 
 | Parameter | Type |  |
 | --- | --- | --- |
-| *package_dir* | str or path-like, optional | The path to the main package directory. If not given, will default to the directory that this function is in. Default is None. |
-| *exclude* | list, optional | A list of strings of subpackage names (subdirectories) to not write documentation for. Default is None. |
+| string | str | The string to convert. |
 
 
-### write_subpackage_documentation(*package_dir=''*, *exclude=[]*)
-Writes documentation to a file for every subpackage in a package. 
-
-A subpackage is defined as a subdirectory that has an `__init__.py` file. 
-
-| Parameter | Type |  |
-| --- | --- | --- |
-| *package_dir* | str or path-like, optional | The path to the main package directory. If not given, will default to the directory that this function is in. Default is None. |
-| *exclude* | list, optional | A list of strings of subpackage names (subdirectories) to not write documentation for. Default is None. |
+| Returns |  |
+| --- | --- |
+| str | The string formatted to be a markdown link. |
 
 
 <!-- Links -->
-[convert_to_markdown_link]: #convert_to_markdown_linkstring
-[generate_markdown_table]: #generate_markdown_tableheaders-args-italicize_optionaltrue
+[write_package_documentation]: #write_package_documentationpackage_dir-parent_packagenone-write_subpkgstrue-exclude
+[write_documentation_for_objs]: #write_documentation_for_objsobjs-filename-include_toctrue
 [get_obj_documentation]: #get_obj_documentationobj
 [get_public_methods]: #get_public_methodsclass_obj
 [get_public_objects]: #get_public_objectspackage
-[get_subpackages]: #get_subpackagespackage_dir
-[write_documentation]: #write_documentationobjs-filename-include_toctrue
-[write_package_documentation]: #write_package_documentationpackage_dir-exclude
-[write_subpackage_documentation]: #write_subpackage_documentationpackage_dir-exclude
+[generate_markdown_table]: #generate_markdown_tableheaders-args-italicize_optionaltrue
+[convert_to_markdown_link]: #convert_to_markdown_linkstring
