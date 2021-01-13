@@ -292,6 +292,10 @@ def get_subpackage_toc(package_dir, package_name='', exclude=[]):
             subpkg_name = f'{pkg}.{subpkg}'
 
             subpkg_docstring = import_module(subpkg_name).__doc__
+            if subpkg_docstring is None:
+                subpkg_docstring = ''
+            subpkg_docstring = subpkg_docstring.split('\n\n')[0]
+
             subpackage_toc += f"* [{subpkg_name}]({subpkg_name.replace('.','-')}.md) - {subpkg_docstring}\n"
         subpackage_toc += '\n'
 
@@ -559,8 +563,8 @@ def write_package_documentation(package_dir='', parent_package=None, write_subpk
     title = f'# {pkg} Documentation\n'
     navbar = ''
     if parent_package is not None:
-        pkg = f'{parent_package}.{pkg}'
         title = f'# Documentation for the {pkg} subpackage\n'
+        pkg = f'{parent_package}.{pkg}'
 
         tree = pkg.split('.')
         doc_links = {s:f"{'-'.join(tree[:i])}.md" for i,s in enumerate(tree, 1)}

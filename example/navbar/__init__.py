@@ -1,1 +1,1 @@
-"""This is a nested subpackage that demonstrates the utility of the navbar."""
+"""This is a simple nested subpackage that demonstrates navbar utility."""

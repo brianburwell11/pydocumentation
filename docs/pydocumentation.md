@@ -3,7 +3,7 @@ A tool that automatically generates Markdown Documentation from Python docstring
 
 
 ## Subpackages
-* [pydocumentation.example](pydocumentation-example.md) - This is an example subpackage to demonstrate how the documentation is
+* [pydocumentation.example](pydocumentation-example.md) - An example subpackage to demonstrate how the documentation is
 presented.
 
 ## Functions

@@ -1,6 +1,6 @@
 """example_objects.py
-Contains an example function and class that are documented in `example
-DOC.md` when this script is run as __main__
+Contains an example function and class that are documented in
+`/docs/pydocumentation-example.md` when pydocumentation is run.
 """
 
 def example_function(param, default_param='default value', opt_param=None):
