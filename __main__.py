@@ -1,25 +1,23 @@
-from os.path import abspath, split
-from sys import argv
+from argparse import ArgumentParser
 
 from documentation import write_package_documentation
 
-this_pkg = split(abspath(__file__))[0]
 
-help_message = f"""pydocumentation
-{__import__(split(this_pkg)[1]+'.__init__').__doc__}
+__author__ = 'Brian Burwell'
+__version__ = '1.1'
 
-Usage: python3 pydocumentation {{pkg}}...
+parser = ArgumentParser(prog='pydocumentation',
+                        description="A tool that automatically generates Markdown Documentation from Python docstrings.",
+                        usage="%(prog)s PATH..."
+                        )
 
--h,--help       Show this help screen
-pkg             Path to a Python package
-"""
+parser.add_argument('-v', '--version', help='show the current version of %(prog)s',
+                    action='version', version=f'%(prog)s {__version__}')
+parser.add_argument('pkg', metavar='PATH', help='path to a Python package', nargs='+', type=str)
 
-if '-h' in argv or '--help' in argv:
-    print(help_message)
-    quit()
+args = parser.parse_args()
 
-if len(argv) == 1:
-    write_package_documentation(this_pkg)
-else:
-    for arg in argv[1:]:
-        write_package_documentation(arg)
+if args.pkg is not None:
+    for pkg in args.pkg:
+        write_package_documentation(pkg)
+    print('\nDocumentation complete!')
